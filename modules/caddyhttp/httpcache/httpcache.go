@@ -59,6 +59,9 @@ type Cache struct {
 	// Maximum size of the cache, in bytes. Default is 512 MB.
 	MaxSize int64 `json:"max_size,omitempty"`
 
+	// Which Headers must used in key; for example you may wish use 'Accept' header in key
+	Headers []string `json:"headers,omitempty"`
+
 	group *groupcache.Group
 }
 
@@ -117,7 +120,7 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request, next caddyhttp
 	// TODO: groupcache has no explicit cache eviction, so we need to embed
 	// all information related to expiring cache entries into the key; right
 	// now we just use the request URI as a proof-of-concept
-	key := r.RequestURI
+	key := c.buildKey(r)
 
 	var cachedBytes []byte
 	err := c.group.Get(ctx, key, groupcache.AllocatingByteSliceSink(&cachedBytes))
@@ -200,6 +203,16 @@ func (c *Cache) getter(ctx groupcache.Context, key string, dest groupcache.Sink)
 	dest.SetBytes(buf.Bytes())
 
 	return nil
+}
+
+func (c *Cache) buildKey(r *http.Request) string {
+	keyString := r.RequestURI
+	if len(c.Headers) > 0 {
+		for _, v := range c.Headers {
+			keyString += r.Header.Get(v)
+		}
+	}
+	return keyString
 }
 
 type headerAndStatus struct {
