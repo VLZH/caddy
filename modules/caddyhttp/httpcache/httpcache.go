@@ -16,6 +16,7 @@ package httpcache
 
 import (
 	"bytes"
+	"crypto/md5"
 	"encoding/gob"
 	"fmt"
 	"io"
@@ -212,7 +213,7 @@ func (c *Cache) buildKey(r *http.Request) string {
 			keyString += r.Header.Get(v)
 		}
 	}
-	return keyString
+	return fmt.Sprintf("%x", md5.Sum([]byte(keyString)))
 }
 
 type headerAndStatus struct {
